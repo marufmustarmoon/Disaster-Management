@@ -7,17 +7,35 @@ class User(AbstractUser):
         ('admin', 'Admin'),
         ('volunteer', 'Volunteer'),
     )
+    LOCATION_CHOUCES = (
+        ('dhaka', 'Dhaka'),
+        ('chittagong', 'Chittagong'),
+        ('sylhet', 'Sylhet'),
+        ('rajshahi', 'Rajshahi'),
+        ('khulna', 'Khulna'),
+        ('barisal', 'Barisal'),
+        ('rangpur', 'Rangpur'),
+    )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
-
-
-
-
-class Volunteer(models.Model):
-    user = models.OneToOneField(User, on_delete=models.CASCADE)
-    assigned_tasks = models.ManyToManyField('Task', related_name='volunteers')
+    location = models.CharField(max_length=20, choices=LOCATION_CHOUCES, default='dhaka')
+    age = models.IntegerField()
+    mobile_number = models.CharField(max_length=20)
+    assigned_tasks = models.ManyToManyField('Task', related_name='assign_task', blank=True)
 
     def __str__(self):
-        return self.user.username
+        return self.username
+
+    
+
+
+
+
+# class Volunteer(models.Model):
+#     user = models.OneToOneField(User, on_delete=models.CASCADE)
+#     assigned_tasks = models.ManyToManyField('Task', related_name='volunteers')
+
+#     def __str__(self):
+#         return self.user.username
 
 class Task(models.Model):
     title = models.CharField(max_length=100)
@@ -59,7 +77,8 @@ class Crisis(models.Model):
     status = models.CharField(max_length=10, choices=STATUS_CHOICES, default='pending')
     image = models.ImageField(upload_to='crisis_images/', blank=True, null=True)
     required_help = models.TextField()
-    added_by = models.CharField(max_length=200)
+    created_by = models.CharField(max_length=200,default="Anonymous user")
+    timestamp = models.DateTimeField(auto_now_add=True)
 
 # Inventory model for Relief and Expense items
 class InventoryItem(models.Model):
@@ -68,8 +87,9 @@ class InventoryItem(models.Model):
         ('expense', 'Expense'),
     )
     item_name = models.CharField(max_length=200)
-    quantity = models.PositiveIntegerField()
+    quantity = models.CharField(max_length=200)
     item_type = models.CharField(max_length=10, choices=TYPE_CHOICES)
+    expense = models.IntegerField(default=0, null=True, blank=True)  
     added_by = models.ForeignKey(User, on_delete=models.CASCADE)
     timestamp = models.DateTimeField(auto_now_add=True)
 

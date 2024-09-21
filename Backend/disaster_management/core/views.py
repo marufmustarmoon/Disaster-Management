@@ -5,17 +5,17 @@ from .models import Donation, Crisis, InventoryItem
 from .serializers import DonationSerializer, CrisisSerializer, InventorySerializer
 from .permissions import IsAdmin, IsVolunteer
 from rest_framework.permissions import AllowAny, IsAuthenticated
-from .models import Volunteer
+
 from .serializers import UserSerializer
 from .models import Task
 from .serializers import TaskSerializer
-from .models import Volunteer
+
 
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Sum, DateField
 from django.db.models.functions import TruncDate
-from .models import Donation
+from .models import Donation, InventoryItem
 # Expense
 from rest_framework.views import APIView
 from rest_framework.response import Response
@@ -30,20 +30,82 @@ from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
 
 # Donation API: Anyone can donate
+from itertools import groupby
+from operator import itemgetter
+
 class DonationAPI(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
         donations = Donation.objects.all().order_by('-timestamp')
+        expense = InventoryItem.objects.all().order_by('-timestamp')
+
+        # Calculate the total donated amount dynamically
+        total_donations = donations.aggregate(Sum('amount'))['amount__sum'] or 0
+        total_expense = expense.aggregate(Sum('expense'))['expense__sum'] or 0
+
+        # Group donations and expenses by day for chart data
+        donations_per_day = donations.annotate(day=TruncDate('timestamp')).values('day').annotate(total_donated=Sum('amount')).order_by('day')
+        expenses_per_day = expense.annotate(day=TruncDate('timestamp')).values('day').annotate(total_expense=Sum('expense')).order_by('day')
+
+        # Combine donations and expenses based on the day
+        combined_data = {}
+
+        # Add donations to combined_data
+        for donation in donations_per_day:
+            day = donation['day']
+            combined_data[day] = {
+                'day': day,
+                'total_donated': donation['total_donated'],
+                'total_expense': 0  # Default 0 for days without expenses
+            }
+
+        # Add expenses to combined_data (merge if the day exists)
+        for expense in expenses_per_day:
+            day = expense['day']
+            if day in combined_data:
+                combined_data[day]['total_expense'] = expense['total_expense']
+            else:
+                combined_data[day] = {
+                    'day': day,
+                    'total_donated': 0,  # Default 0 for days without donations
+                    'total_expense': expense['total_expense']
+                }
+
+        # Sort combined data by day
+        combined_chart_data = sorted(combined_data.values(), key=itemgetter('day'))
+
+        available_donations = total_donations - total_expense
         serializer = DonationSerializer(donations, many=True)
-        return Response(serializer.data)
+        
+        response_data = {
+            "total_donated": total_donations,
+            "available_donations": available_donations,
+            "chart_data": combined_chart_data,  # Combined donations and expenses by day
+            "donations": serializer.data
+        }
+
+        return Response(response_data)
+
 
     def post(self, request):
         serializer = DonationSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
+            # Save the new donation
+            donation = serializer.save()
+
+            # After saving, recalculate the total donated amount in real-time
+            total_donations = Donation.objects.aggregate(Sum('amount'))['amount__sum'] or 0
+
+            # Return the donation data and the updated total donated amount
+            response_data = {
+                "donation": serializer.data,
+                "total_donated": total_donations  # Return updated total
+            }
+
+            return Response(response_data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
 
 # Crisis API: Only authenticated users can add crises, but anyone can view them.
 class   CrisisAPI(APIView):
@@ -53,6 +115,10 @@ class   CrisisAPI(APIView):
             try: 
                 if request.user.role == 'admin':
                     crises = Crisis.objects.all()
+                    serializer = CrisisSerializer(crises, many=True)
+                    return Response(serializer.data)
+                else:
+                    crises = Crisis.objects.filter(status="active")
                     serializer = CrisisSerializer(crises, many=True)
                     return Response(serializer.data)
             except:
@@ -150,7 +216,25 @@ class VolunteerManagementAPI(APIView):
         serializer = UserSerializer(volunteers, many=True)
         return Response(serializer.data)
 
-    
+
+class ProfileAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        # Retrieve the user's profile details
+        user = request.user
+        serializer = UserSerializer(user)
+        return Response(serializer.data, status=status.HTTP_200_OK)
+
+    def patch(self, request):
+        # Update the user's profile details
+        user = request.user
+        serializer = UserSerializer(user, data=request.data, partial=True)
+        
+        if serializer.is_valid():
+            serializer.save()
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Assign volunteers to tasks/crises
 class AssignTaskAPI(APIView):
@@ -280,10 +364,13 @@ class LoginAPIView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
         serializer = LoginSerializer(data=request.data)
+      
         if serializer.is_valid():
             user = serializer.validated_data['user']
             refresh = RefreshToken.for_user(user)
+            print(str(refresh.access_token))
             return Response({
+                'username': user.username,
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             })
@@ -330,7 +417,51 @@ class AdminTaskAPI(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
    
+class VolunteerAssignTask(APIView):
+    # permission_classes = [IsAdmin | IsVolunteer]
+    def post(self, request,volunteer_id):
+        self.permission_classes = [IsAdmin]
+        self.check_permissions(request)
+       
+        volunteer = User.objects.get(pk=volunteer_id)
+        
+        print(request.data['task_id'])
+        
+        tasks = volunteer.assigned_tasks.add(request.data['task_id'])
 
+        
+        serializer = TaskSerializer(tasks, many=True)
+        return Response(serializer.data)
+    
+    def delete(self, request, volunteer_id):
+        self.permission_classes = [IsAdmin]
+        self.check_permissions(request)
+        
+        # Fetch the volunteer and task
+        volunteer = User.objects.get(pk=volunteer_id)
+        task_id = request.GET.get('task_id')
+
+        # Check if task_id exists in query params
+        if task_id:
+            try:
+                task = Task.objects.get(pk=task_id)
+            except Task.DoesNotExist:
+                return Response({"error": "Task not found."}, status=status.HTTP_404_NOT_FOUND)
+            
+            # Remove the task from the volunteer's assigned tasks
+            volunteer.assigned_tasks.remove(task)
+
+            # Serialize the remaining tasks
+            remaining_tasks = volunteer.assigned_tasks.all()
+            serializer = TaskSerializer(remaining_tasks, many=True)
+            
+            return Response(serializer.data, status=status.HTTP_200_OK)
+        
+        return Response({"error": "Task ID is required."}, status=status.HTTP_400_BAD_REQUEST)
+
+       
+       
+        
 class VolunteerTaskAPI(APIView):
     def get(self, request):
        
@@ -365,3 +496,11 @@ class VolunteerTaskAPI(APIView):
             return Response({'detail': 'Task not assigned to this volunteer'}, status=status.HTTP_403_FORBIDDEN)
         except Task.DoesNotExist:
             return Response({'detail': 'Task not found'}, status=status.HTTP_404_NOT_FOUND)
+        
+
+
+
+
+
+
+

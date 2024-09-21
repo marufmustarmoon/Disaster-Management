@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Donation, Crisis, InventoryItem,Volunteer, Task
+from .models import User, Donation, Crisis, InventoryItem, Task
 
 from django.contrib.auth import authenticate
 from .models import User
@@ -11,6 +11,8 @@ class RegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'password', 'role']
+
+
 
     def create(self, validated_data):
         user = User.objects.create_user(
@@ -36,7 +38,7 @@ class LoginSerializer(serializers.Serializer):
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ['id', 'username', 'role']
+        fields = ['id', 'username', 'age','location','assigned_tasks', 'role', 'mobile_number']
 
 # Donation Serializer
 class DonationSerializer(serializers.ModelSerializer):
@@ -48,7 +50,7 @@ class DonationSerializer(serializers.ModelSerializer):
 class CrisisSerializer(serializers.ModelSerializer):
     class Meta:
         model = Crisis
-        fields = ['id', 'title', 'location', 'description', 'severity', 'status', 'image', 'required_help']
+        fields = ['id', 'title', 'location', 'description', 'severity', 'status', 'image', 'required_help', 'created_by', 'timestamp']
 
 # Inventory Serializer
 class InventorySerializer(serializers.ModelSerializer):
@@ -65,4 +67,4 @@ class InventorySerializer(serializers.ModelSerializer):
 class TaskSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
-        fields = ['title', 'description', 'status', 'created_at', 'updated_at']
+        fields = ['id','title', 'description', 'status', 'created_at', 'updated_at']
