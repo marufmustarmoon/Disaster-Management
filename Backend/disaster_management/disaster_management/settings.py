@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-r86c3r32-d6*5u1n2l&axasg7xmf1$_a0tp(5bel#is1h^y&=3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = ['disaster-management-6kgh.onrender.com']
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Your frontend address
