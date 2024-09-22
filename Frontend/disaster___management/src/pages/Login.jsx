@@ -1,8 +1,8 @@
-// src/pages/Login.js
+
 
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import authService from '../services/authService'; // Assuming you have auth service for API calls
+import authService from '../services/authService'; 
 
 const Login = () => {
   const [formData, setFormData] = useState({
@@ -27,6 +27,9 @@ const Login = () => {
     } catch (err) {
       setError(err.message ||'Login failed. Please check your credentials.');
     }
+  };
+  const handleRegisterClick = () => {
+    navigate('/register');
   };
 
   return (
@@ -63,6 +66,16 @@ const Login = () => {
           Login
         </button>
       </form>
+      <div className="text-center"><h2>or</h2></div>
+      <div className="text-center">
+        <button
+          type="button"
+          className="text-blue-500 hover:underline"
+          onClick={handleRegisterClick}
+        >
+          Register
+        </button>
+      </div>
     </div>
   );
 };

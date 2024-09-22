@@ -1,41 +1,48 @@
-// src/pages/CrisisPage.js
-
-import { useEffect, useState } from 'react';
-import crisisService from '../services/crisisService';
+import { useEffect, useState } from "react";
+import crisisService from "../services/crisisService";
 
 const Crisis = () => {
+  const token = JSON.parse(localStorage.getItem("user"));
+  console.log("check token", token);
   const [crises, setCrises] = useState([]);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState("all");
   const [newCrisis, setNewCrisis] = useState({
-    title: '',
-    location: '',
-    description: '',
-    severity: 'low',
-    status: 'active',
-    required_help: '',
+    title: "",
+    location: "",
+    description: "",
+    severity: "low",
+    status: "active",
+    required_help: "",
     image: null,
   });
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+  const [showModal, setShowModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedCrisis, setSelectedCrisis] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 5;
 
   // Fetch all crises on component mount
   useEffect(() => {
     const fetchCrises = async () => {
       try {
-        const crisisData = await crisisService.getCrises();
-        console.log(crisisData)
-        setCrises(crisisData);
+        const crisisData = await crisisService.getCrises(currentPage,itemsPerPage);
+        console.log("crisisdata",currentPage);
+        setCrises(crisisData.data.results);
+        setTotalPages(crisisData.totalPages);
       } catch (error) {
-        console.error('Error fetching crisis data:', error);
+        console.error("Error fetching crisis data:", error);
       }
     };
 
     fetchCrises();
-  }, []);
+  }, [currentPage]);
 
   // Filter crises based on severity
   const filteredCrises = crises.filter((crisis) => {
-    if (filter === 'all') return true;
+    if (filter === "all") return true;
     return crisis.severity === filter;
   });
 
@@ -53,46 +60,125 @@ const Crisis = () => {
   // Handle form submission
   const handleSubmit = async (e) => {
     e.preventDefault();
-
+  
     const formData = new FormData();
+    
     for (const key in newCrisis) {
-      if (key === 'image' && newCrisis[key] === null) continue; // Skip appending image if null
+      // Skip image if null
+      if (key === "image" && newCrisis[key] === null) continue;
+      
+      // Log to ensure fields are being added
+      console.log(`${key}: `, newCrisis[key]);
+      
       formData.append(key, newCrisis[key]);
     }
-
+  
     try {
-      await crisisService.createCrisis(formData);
-      setSuccess('Crisis added successfully! Awaiting admin approval.');
+      if (selectedCrisis) {
+        // Update crisis logic
+        await crisisService.updateCrisis(selectedCrisis.id, formData);
+        setSuccess("Crisis updated successfully!");
+      } else {
+        // Create new crisis logic
+        await crisisService.createCrisis(formData);
+        setSuccess("Crisis added successfully! Awaiting admin approval.");
+      }
+  
+      // Reset the form and state after submission
       setNewCrisis({
-        title: '',
-        location: '',
-        description: '',
-        severity: 'low',
-        status: 'active',
-        required_help: '',
+        title: "",
+        location: "",
+        description: "",
+        severity: "low",
+        status: "active",
+        required_help: "",
         image: null,
       });
-      setError('');
+      setError("");
+      setShowModal(false); 
+      setSelectedCrisis(null); 
+  
       // Re-fetch crises to update the list
-      const crisisData = await crisisService.getCrises();
-      setCrises(crisisData);
+      const crisisData = await crisisService.getCrises(currentPage);
+      setCrises(crisisData.data.results);
+      
     } catch (err) {
-      setError(err.response?.data?.detail || 'Error adding crisis. Please try again.');
+      setError(
+        err.response?.data?.detail || "Error processing crisis. Please try again."
+      );
     }
   };
+  
+
+  // Handle delete
+  const handleDelete = async () => {
+    if (!selectedCrisis) return;
+    try {
+      await crisisService.deleteCrisis(selectedCrisis.id);
+      setSuccess("Crisis deleted successfully!");
+      setShowDeleteModal(false);
+      setSelectedCrisis(null);
+      // Re-fetch crises to update the list
+      const crisisData = await crisisService.getCrises(currentPage);
+      setCrises(crisisData.data.results);
+    } catch (error) {
+      setError(error.message | "Error deleting crisis.");
+    }
+  };
+
+  useEffect(() => {
+    if (selectedCrisis) {
+      
+      // Copy selectedCrisis to newCrisis when a crisis is selected for editing
+      setNewCrisis({
+        title: selectedCrisis.title,
+        location: selectedCrisis.location,
+        description: selectedCrisis.description,
+        severity: selectedCrisis.severity,
+        status: selectedCrisis.status,
+        required_help: selectedCrisis.required_help,
+        image: null, 
+      });
+    } else {
+      // Reset form when adding a new crisis
+      setNewCrisis({
+        title: "",
+        location: "",
+        description: "",
+        severity: "low",
+        status: "active",
+        required_help: "",
+        image: null,
+      });
+    }
+  }, [selectedCrisis]);
 
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="text-3xl font-bold mb-6">Crisis Management</h1>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Left Section: Crisis List with Filter */}
+      <div className="">
         <div>
-          <h2 className="text-2xl font-semibold mb-4">Existing Crisis</h2>
+          <div className="flex flex-row justify-between">
+            <h2 className="text-2xl font-semibold mb-4">Existing Crisis</h2>
+            <div className="">
+              <button
+                onClick={() => {
+                  setShowModal(true);
+                  setSelectedCrisis(null); // Reset to create a new crisis
+                }}
+                className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700"         >
+                Add Crisis
+              </button>
+            </div>
+          </div>
 
           {/* Filter Dropdown */}
           <div className="mb-6">
-            <label className="block text-gray-700 text-sm font-bold mb-2" htmlFor="filter">
+            <label
+              className="block text-gray-700 text-sm font-bold mb-2"
+              htmlFor="filter"
+            >
               Filter by Severity:
             </label>
             <select
@@ -115,9 +201,9 @@ const Crisis = () => {
             ) : (
               filteredCrises.map((crisis) => (
                 <li key={crisis.id} className="bg-white shadow-lg rounded-lg p-6">
-                  {crisis.image && crisis.image !== null && (
-                      <img src={crisis.image} className="mt-4 rounded-lg" />
-                    )}
+                  {crisis.image && (
+                    <img src={crisis.image} className="mt-4 rounded-lg" alt="crisis" />
+                  )}
                   <h2 className="text-2xl font-semibold mb-2">{crisis.title}</h2>
                   <p className="text-gray-700 mb-2">
                     <strong>Location:</strong> {crisis.location}
@@ -134,95 +220,178 @@ const Crisis = () => {
                   <p className="text-gray-700 mb-2">
                     <strong>Required Help:</strong> {crisis.required_help}
                   </p>
-                
+                  <button
+                    onClick={() => {
+                      setShowModal(true);
+                      setSelectedCrisis(crisis); // Set crisis to update
+                    }}
+                    className={`bg-yellow-500 text-white py-2 px-4 rounded-md mr-2 hover:bg-yellow-700 ${token === null ? "hidden" : ""}`}  
+                  >
+                    Update
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(true);
+                      setSelectedCrisis(crisis); // Set crisis to delete
+                    }}
+                    className={`bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-700 ${token === null ? "hidden" : ""}`}  
+                  >
+                    Delete
+                  </button>
                 </li>
               ))
             )}
           </ul>
-        </div>
 
-        {/* Right Section: Add New Crisis Form */}
-        <div>
-          <h2 className="text-2xl font-semibold mb-4">Add a New Crisis</h2>
-          {error && <p className="text-red-500 mb-4">{error}</p>}
-          {success && <p className="text-green-500 mb-4">{success}</p>}
-
-          <form onSubmit={handleSubmit} encType="multipart/form-data">
-            <div className="mb-4">
-              <label className="block text-gray-700">Title:</label>
-              <input
-                type="text"
-                name="title"
-                value={newCrisis.title}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded-md"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700">Location:</label>
-              <input
-                type="text"
-                name="location"
-                value={newCrisis.location}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded-md"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700">Description:</label>
-              <textarea
-                name="description"
-                value={newCrisis.description}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded-md"
-                required
-              ></textarea>
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700">Severity:</label>
-              <select
-                name="severity"
-                value={newCrisis.severity}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded-md"
-                required
-              >
-                <option value="low">Low</option>
-                <option value="medium">Medium</option>
-                <option value="high">High</option>
-              </select>
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700">Required Help:</label>
-              <input
-                type="text"
-                name="required_help"
-                value={newCrisis.required_help}
-                onChange={handleInputChange}
-                className="w-full p-2 border rounded-md"
-                required
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-gray-700">Image (optional):</label>
-              <input
-                type="file"
-                name="image"
-                accept="image/*"
-                onChange={handleImageChange}
-                className="w-full p-2 border rounded-md"
-              />
-            </div>
+          {/* Pagination */}
+          <div className="mt-4 flex justify-center">
             <button
-              type="submit"
-              className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md mx-2"
+              disabled={currentPage === 1}
             >
-              Submit Crisis
+              Previous
             </button>
-          </form>
+            <span className="text-lg">{`Page ${currentPage} of ${totalPages}`}</span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md mx-2"
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
         </div>
+
+        {/* Add/Edit Crisis Modal */}
+        {showModal && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
+            <div className="bg-white p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-2xl font-semibold mb-4">
+                {selectedCrisis ? "Update Crisis" : "Add a New Crisis"}
+              </h2>
+              {error && <p className="text-red-500 mb-4">{error}</p>}
+              {success && <p className="text-green-500 mb-4">{success}</p>}
+
+              <form onSubmit={handleSubmit} encType="multipart/form-data">
+                <div className="mb-4">
+                  <label className="block text-gray-700">Title:</label>
+                  <input
+                    type="text"
+                    name="title"
+                    value={newCrisis.title}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">Location:</label>
+                  <input
+                    type="text"
+                    name="location"
+                    value={newCrisis.location}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">Description:</label>
+                  <textarea
+                    name="description"
+                    value={newCrisis.description}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  ></textarea>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">Required Help:</label>
+                  <input
+                    type="text"
+                    name="required_help"
+                    value={newCrisis.required_help}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">Severity:</label>
+                  <select
+                    name="severity"
+                    value={newCrisis.severity}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">Status:</label>
+                  <select
+                    name="status"
+                    value={newCrisis.status}
+                    onChange={handleInputChange}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="active">Active</option>
+                    <option value="resolved">Resolved</option>
+                  </select>
+                </div>
+                <div className="mb-4">
+                  <label className="block text-gray-700">Image:</label>
+                  <input
+                    type="file"
+                    name="image"
+                    onChange={handleImageChange}
+                    className="w-full p-2 border rounded-md"
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-4">
+                  <button
+                    type="button"
+                    onClick={() => setShowModal(false)}
+                    className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                  >
+                    {selectedCrisis ? "Update Crisis" : "Add Crisis"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Delete Crisis Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center">
+            <div className="bg-white p-6 rounded-lg w-full max-w-md">
+              <h2 className="text-2xl font-semibold mb-4">Delete Crisis</h2>
+              <p>Are you sure you want to delete this crisis?</p>
+
+              <div className="flex justify-end space-x-4 mt-6">
+                <button
+                  onClick={() => setShowDeleteModal(false)}
+                  className="bg-gray-500 text-white py-2 px-4 rounded-md hover:bg-gray-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleDelete}
+                  className="bg-red-500 text-white py-2 px-4 rounded-md hover:bg-red-700"
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

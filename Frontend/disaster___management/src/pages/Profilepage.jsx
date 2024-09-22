@@ -1,4 +1,4 @@
-// src/pages/ProfilePage.js
+
 
 import { useState, useEffect } from 'react';
 import profileService from '../services/profileService';
@@ -46,7 +46,7 @@ const ProfilePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      // Assuming an update profile API exists
+      
       await profileService.updateProfile(profile);
       alert('Profile updated successfully');
     } catch (err) {

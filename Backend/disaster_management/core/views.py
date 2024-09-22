@@ -7,7 +7,7 @@ from .permissions import IsAdmin, IsVolunteer
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .serializers import UserSerializer
-from .models import Task
+from .models import Task,Respond
 from .serializers import TaskSerializer
 
 
@@ -25,8 +25,13 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from .serializers import RegisterSerializer, LoginSerializer
 from rest_framework.permissions import IsAuthenticatedOrReadOnly
+from rest_framework.pagination import PageNumberPagination
+from rest_framework.response import Response
 
 
+
+class CustomPagination(PageNumberPagination):
+    page_size_query_param = 'itemsPerPage'  # This allows dynamic control over the number of items per page.
 
 
 # Donation API: Anyone can donate
@@ -107,42 +112,87 @@ class DonationAPI(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
+# class CrisisAPI(APIView):
+#     permission_classes = [AllowAny]
+
+#     def get(self, request):
+#         paginator = CustomPagination()
+#         paginator.page_size = request.query_params.get('itemsPerPage', 10)  # Default page size if not provided
+#         page = request.query_params.get('page', 1)  # Default page 1 if not provided
+        
+#         try:
+#             if request.user.role == 'admin':
+#                 crises = Crisis.objects.all()
+#             else:
+#                 crises = Crisis.objects.filter(status="active")
+
+#             # Apply pagination
+#             paginated_crises = paginator.paginate_queryset(crises, request)
+#             serializer = CrisisSerializer(paginated_crises, many=True)
+            
+#             # Return the paginated response
+#             return paginator.get_paginated_response(serializer.data)
+        
+#         except Exception as e:
+#             crises = Crisis.objects.filter(status="active")
+#             paginated_crises = paginator.paginate_queryset(crises, request)
+#             serializer = CrisisSerializer(paginated_crises, many=True)
+#             return paginator.get_paginated_response(serializer.data)
+
+
 # Crisis API: Only authenticated users can add crises, but anyone can view them.
-class   CrisisAPI(APIView):
+class CrisisAPI(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-            try: 
-                if request.user.role == 'admin':
-                    crises = Crisis.objects.all()
-                    serializer = CrisisSerializer(crises, many=True)
-                    return Response(serializer.data)
-                else:
-                    crises = Crisis.objects.filter(status="active")
-                    serializer = CrisisSerializer(crises, many=True)
-                    return Response(serializer.data)
-            except:
-                    
+        paginator = CustomPagination()
+        paginator.page_size = request.query_params.get('itemsPerPage', 5)  
+        page = request.query_params.get('page', 1)  
+        
+        try:
+            if request.user.role == 'admin':
+                crises = Crisis.objects.all()
+            else:
                 crises = Crisis.objects.filter(status="active")
-                serializer = CrisisSerializer(crises, many=True)
-                return Response(serializer.data)
-    
+
+            
+            paginated_crises = paginator.paginate_queryset(crises, request)
+            serializer = CrisisSerializer(paginated_crises, many=True)
+            print(serializer.data)
+           
+            
+            return paginator.get_paginated_response(serializer.data)
+        
+        except Exception as e:
+           
+            crises = Crisis.objects.filter(status="active")
+            paginated_crises = paginator.paginate_queryset(crises, request)
+            serializer = CrisisSerializer(paginated_crises, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
     
         
         
 
     def post(self, request):
-        # Anyone can report a crisis, but it defaults to "pending"
+        
+
         serializer = CrisisSerializer(data=request.data)
         if serializer.is_valid():
-            serializer.save( status="pending")
+            try:
+                if request.user.role == 'admin':
+                    serializer.save(status="active")
+                else:
+                    serializer.save(status="pending")
+            except:
+                serializer.save(status="pending")
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def patch(self, request):
+    def put(self, request):
         # Extract crisis_id from the request body
-        crisis_id = request.data.get('crisis_id')
-        
+        crisis_id = request.GET.get('id')
+        print("request",request.data)
         if not crisis_id:
             return Response({'detail': 'Crisis ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -152,6 +202,7 @@ class   CrisisAPI(APIView):
             return Response({'detail': 'Crisis not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         if request.user.role == 'admin':
+            print("moon")
             serializer = CrisisSerializer(crisis, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -159,32 +210,72 @@ class   CrisisAPI(APIView):
             return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
         
         return Response({'detail': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+   
+    def delete(self, request):
+        crisis_id = request.GET.get('id')
+        print("request",request.data)
+        if not crisis_id:
+            return Response({'detail': 'Crisis ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            crisis = Crisis.objects.get(id=crisis_id)
+        except Crisis.DoesNotExist:
+            return Response({'detail': 'Crisis not found.'}, status=status.HTTP_404_NOT_FOUND)
+
+        if request.user.role == 'admin':
+            
+            crisis.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+                
+        
+        return Response({'detail': 'Not authorized'}, status=status.HTTP_403_FORBIDDEN)
+    
+
+class CrisistoResponseAPI(APIView):
+    permission_classes = [IsAuthenticated]
+
+    # Existing GET method for listing crises
+
+    def post(self, request, crisis_id):
+        try:
+            crisis = Crisis.objects.get(pk=crisis_id, status="active")
+            if request.user.role == 'volunteer':
+                response_message = request.data.get('message')
+                Respond.objects.create(volunteer=request.user, crisis=crisis, message=response_message)
+                return Response({"detail": "Response submitted successfully"}, status=201)
+            else:
+                return Response({"error": "Only volunteers can respond to crises"}, status=403)
+        except Crisis.DoesNotExist:
+            return Response({"error": "Crisis not found or not active"}, status=404)
+
+       
 
 
 # Inventory API: Only volunteers and admins can add, update, or delete inventory items.
 class InventoryAPI(APIView):
-    permission_classes = [IsAuthenticated]
+    
 
-    def get_permissions(self):
-        if self.request.method in ['POST', 'PUT', 'DELETE']:
-            return [IsAdmin() | IsVolunteer()]
-        return [IsAuthenticated()]
 
     def get(self, request):
+        self.permission_classes = [IsAdmin or IsVolunteer]
+        self.check_permissions(request)
         inventory = InventoryItem.objects.all()
         serializer = InventorySerializer(inventory, many=True)
         return Response(serializer.data)
 
     def post(self, request):
-        serializer = InventorySerializer(data=request.data)
+        self.permission_classes = [IsAdmin or IsVolunteer]
+        self.check_permissions(request)
+        serializer = InventorySerializer(data=request.data,partial=True)
         if serializer.is_valid():
             serializer.save(added_by=request.user)
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def put(self, request, pk):
+    def put(self, request):
         try:
-            item = InventoryItem.objects.get(pk=pk)
+            item = InventoryItem.objects.get(pk=request.GET.get('itemId'))
         except InventoryItem.DoesNotExist:
             return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -194,9 +285,9 @@ class InventoryAPI(APIView):
             return Response(serializer.data)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
-    def delete(self, request, pk):
+    def delete(self, request):
         try:
-            item = InventoryItem.objects.get(pk=pk)
+            item = InventoryItem.objects.get(pk=request.GET.get('itemId'))
         except InventoryItem.DoesNotExist:
             return Response({"error": "Item not found"}, status=status.HTTP_404_NOT_FOUND)
 
@@ -212,9 +303,22 @@ class VolunteerManagementAPI(APIView):
     permission_classes = [AllowAny]
 
     def get(self, request):
-        volunteers = User.objects.filter(role="volunteer")
-        serializer = UserSerializer(volunteers, many=True)
-        return Response(serializer.data)
+        paginator = CustomPagination()
+        paginator.page_size = request.query_params.get('itemsPerPage', 5)
+        page = request.query_params.get('page', 1)
+        
+        try:
+            volunteers = User.objects.filter(role="volunteer")
+            paginated_volunteers = paginator.paginate_queryset(volunteers, request)
+            serializer = UserSerializer(paginated_volunteers, many=True)
+            return paginator.get_paginated_response(serializer.data)
+        
+        except Exception as e:
+            volunteers = User.objects.filter(role="volunteer")
+            paginated_volunteers = paginator.paginate_queryset(volunteers, request)
+            serializer = UserSerializer(paginated_volunteers, many=True)
+            return paginator.get_paginated_response(serializer.data)
+
 
 
 class ProfileAPI(APIView):

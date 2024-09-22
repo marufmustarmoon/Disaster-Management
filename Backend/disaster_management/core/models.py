@@ -98,3 +98,13 @@ class Report(models.Model):
     report_type = models.CharField(max_length=50)
     generated_on = models.DateTimeField(auto_now_add=True)
     file = models.FileField(upload_to='reports/')
+
+
+class Respond(models.Model):
+    volunteer = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'volunteer'})
+    crisis = models.ForeignKey(Crisis, on_delete=models.CASCADE)
+    message = models.TextField()
+    responded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.volunteer.username} - {self.crisis.title}"

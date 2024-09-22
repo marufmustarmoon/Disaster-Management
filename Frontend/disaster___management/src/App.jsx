@@ -12,6 +12,7 @@ import Login from "./pages/Login";
 import Register from "./pages/Register";
 import Volunteer from "./pages/Volunteer";
 import ProfilePage from "./pages/Profilepage";
+import Inventory from "./pages/Inventory";
 
 function App() {
   return (
@@ -63,6 +64,15 @@ function App() {
             element={
               <MainLayout>
                 <Donation />
+              </MainLayout>
+            }
+          />
+
+         <Route
+            path="/inventory"
+            element={
+              <MainLayout>
+                <Inventory />
               </MainLayout>
             }
           />

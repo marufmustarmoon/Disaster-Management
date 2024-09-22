@@ -19,8 +19,6 @@ const register = async (userData) => {
 const login = async (userData) => {
   localStorage.removeItem('user');
   const response = await axios.post(`${API_URL}/login/`, userData);
-   console.log(response.data)
-   console.log(response.data.access)
   if (response.data.access) {
 
     localStorage.setItem('user', JSON.stringify(response.data.access));

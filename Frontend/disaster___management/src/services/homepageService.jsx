@@ -22,7 +22,8 @@ const getRecentCrises = async () => {
 // Fetch available volunteers
 const getVolunteers = async () => {
   const response = await axios.get(`${API_URL}/volunteers`);
-  return response.data;
+  console.log(response.data.results)
+  return response.data.results;
 };
 
 const homepageService = {

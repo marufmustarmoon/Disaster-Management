@@ -1,4 +1,4 @@
-// src/pages/Register.js
+
 
 import  {useState}  from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -35,6 +35,10 @@ const Register = () => {
     } catch (err) {
       setError(err.message || 'Registration failed. Please try again.');
     }
+  };
+
+  const handleLoginClick = () => {
+    navigate("/login"); 
   };
 
   return (
@@ -94,6 +98,16 @@ const Register = () => {
           Register
         </button>
       </form>
+      <div className="text-center"><h2>Already have an account?</h2></div>
+      <div className="text-center ">
+        <button
+          type="button"
+          className="text-red-500  rounded-md hover:underline"
+          onClick={handleLoginClick}
+        >
+          Login
+        </button>
+      </div>
     </div>
   );
 };

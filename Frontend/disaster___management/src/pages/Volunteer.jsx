@@ -9,19 +9,26 @@ const Volunteer = () => {
   const [selectedVolunteer, setSelectedVolunteer] = useState(null);
   const [availableTasks, setAvailableTasks] = useState([]);
   const [selectedTask, setSelectedTask] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const itemsPerPage = 5;
+  const token = JSON.parse(localStorage.getItem("user"));
 
-  const fetchVolunteers = async () => {
-    try {
-      const volunteerData = await volunteerService.getVolunteers();
-      setVolunteers(volunteerData);
-    } catch (error) {
-      console.error('Error fetching volunteer data:', error);
-    }
-  };
+
+  
 
   useEffect(() => {
+    const fetchVolunteers = async () => {
+      try {
+        const volunteerData = await volunteerService.getVolunteers(currentPage,itemsPerPage);
+        setVolunteers(volunteerData.data.results);
+        setTotalPages(volunteerData.totalPages);
+      } catch (error) {
+        console.error('Error fetching volunteer data:', error);
+      }
+    };
     fetchVolunteers();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     const fetchTasks = async () => {
@@ -60,7 +67,8 @@ const Volunteer = () => {
       try {
         await volunteerService.assignTask(selectedVolunteer.id, selectedTask);
         alert(`Task assigned successfully to ${selectedVolunteer.username}`);
-        await fetchVolunteers();
+        const volunteerData = await volunteerService.getVolunteers(currentPage);
+        setVolunteers(volunteerData.data.results);
         setShowAssignModal(false);
         setSelectedTask('');
       } catch (error) {
@@ -75,7 +83,8 @@ const Volunteer = () => {
       try {
         await volunteerService.deleteTask(selectedVolunteer.id, selectedTask);
         alert(`Task deleted successfully from ${selectedVolunteer.username}`);
-        await fetchVolunteers();
+        const volunteerData = await volunteerService.getVolunteers(currentPage);
+        setVolunteers(volunteerData.data.results);
         setShowDeleteModal(false);
         setSelectedTask('');
       } catch (error) {
@@ -110,7 +119,7 @@ const Volunteer = () => {
         ) : (
           filteredVolunteers.map((volunteer) => (
             <li key={volunteer.id} className="bg-white shadow-lg rounded-lg p-6">
-              <h2 className="text-2xl font-semibold mb-2">{volunteer.username}</h2>
+              <h2 className="text-gray-700  mb-2"><strong>Name:</strong>{volunteer.username}</h2>
               <p className="text-gray-700 mb-2">
                 <strong>Age:</strong> {volunteer.age}
               </p>
@@ -142,13 +151,13 @@ const Volunteer = () => {
               {/* Assign Task Button */}
               <button
                 onClick={() => openAssignModal(volunteer)}
-                className="mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700"
+                className={`mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700 ${token === null ? "hidden" : ""}`}   
               >
                 Assign Task
               </button>
               <button
                           onClick={() => openDeleteModal(volunteer)}
-                          className="mt-4 bg-red-500 text-white py-2 px-4 rounded-md hover:text-red-700"
+                          className={`mt-4 bg-red-500 text-white py-2 px-4  rounded-md hover:text-red-700 ${token === null ? "hidden" : ""}`}   
                         >
                           Delete Task
                         </button>
@@ -156,6 +165,24 @@ const Volunteer = () => {
           ))
         )}
       </ul>
+
+      <div className="mt-4 flex justify-center">
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md mx-2"
+              disabled={currentPage === 1}
+            >
+              Previous
+            </button>
+            <span className="text-lg">{`Page ${currentPage} of ${totalPages}`}</span>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md mx-2"
+              disabled={currentPage === totalPages}
+            >
+              Next
+            </button>
+          </div>
 
       {/* Modal for Assigning Task */}
       {showAssignModal && (

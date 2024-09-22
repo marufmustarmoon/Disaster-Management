@@ -5,10 +5,23 @@ import axios from "axios";
 const API_URL = "http://localhost:8000/api/volunteers"; // Adjust the API endpoint as needed
 const TASK_API_URL = "http://localhost:8000/api/tasks"; // Adjust the API endpoint as needed
 
-const getVolunteers = async () => {
-  const response = await axios.get(API_URL);
-  return response.data;
+
+const getVolunteers = async (page = 1,itemsPerPage=5) => {
+  const token = JSON.parse(localStorage.getItem("user"));
+  try {
+    const headers = token ? { Authorization: `Bearer ${token}` } : {undefined};
+    const response = await axios.get(`${API_URL}?page=${page}`, { headers });
+    return {
+      data: response.data, 
+      totalPages: Math.ceil(response.data.count / itemsPerPage),
+    };
+  } catch (error) {
+    console.error("Error fetching crises:", error);
+   
+    return {}; 
+  }
 };
+
 
 const getTasks = async () => {
   const token = JSON.parse(localStorage.getItem("user"));

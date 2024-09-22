@@ -56,7 +56,7 @@ class CrisisSerializer(serializers.ModelSerializer):
 class InventorySerializer(serializers.ModelSerializer):
     class Meta:
         model = InventoryItem
-        fields = ['id', 'item_name', 'quantity', 'item_type', 'added_by', 'timestamp']
+        fields = ['id', 'item_name', 'quantity', 'item_type','expense', 'added_by', 'timestamp']
 
 
 

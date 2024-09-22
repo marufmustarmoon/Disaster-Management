@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import  RegisterAPIView, LoginAPIView, DonationAPI, CrisisAPI, InventoryAPI, VolunteerManagementAPI, AssignTaskAPI, ReportAPI,VolunteerTaskAPI,AdminTaskAPI,ProfileAPI,VolunteerAssignTask
+from .views import  RegisterAPIView, LoginAPIView, DonationAPI, CrisisAPI, InventoryAPI, VolunteerManagementAPI, AssignTaskAPI, ReportAPI,VolunteerTaskAPI,AdminTaskAPI,ProfileAPI,VolunteerAssignTask,CrisistoResponseAPI
 
 urlpatterns = [
     #register urls
@@ -10,7 +10,8 @@ urlpatterns = [
     path('crisis/', CrisisAPI.as_view(), name='crisis-api'),
     path('inventory/', InventoryAPI.as_view(), name='inventory-api'),
     # path('volunteers/', AnonymousVolunteerAPI.as_view(), name='anonymous-volunteer-api'),
-    
+    path('crises/<int:crisis_id>/respond/', CrisistoResponseAPI.as_view(), name='crisis-respond'),
+
     # Admin-specific routes
     path('volunteers/<int:volunteer_id>/assign_task/', VolunteerAssignTask.as_view(), name='volunteer-management-api'),
     path('volunteers/', VolunteerManagementAPI.as_view(), name='volunteer-management'),
