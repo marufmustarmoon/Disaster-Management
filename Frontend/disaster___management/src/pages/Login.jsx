@@ -1,5 +1,3 @@
-
-
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService'; 
@@ -25,9 +23,12 @@ const Login = () => {
       await authService.login(formData); 
       navigate('/'); 
     } catch (err) {
-      setError(err.message ||'Login failed. Please check your credentials.');
+     
+      console.log(err);
+      setError('Invalid credentials. Please check your username and password.');
     }
   };
+
   const handleRegisterClick = () => {
     navigate('/register');
   };
@@ -40,7 +41,7 @@ const Login = () => {
         <div>
           <label className="block text-sm font-medium">Username</label>
           <input
-            type="username"
+            type="text"
             name="username"
             value={formData.username}
             onChange={handleChange}

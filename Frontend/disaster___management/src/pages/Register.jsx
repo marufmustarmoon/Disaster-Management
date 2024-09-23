@@ -1,6 +1,4 @@
-
-
-import  {useState}  from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import authService from '../services/authService'; 
 
@@ -33,7 +31,9 @@ const Register = () => {
       await authService.register(formData); // Call the auth service to register
       navigate('/login'); // Redirect to login page after successful registration
     } catch (err) {
-      setError(err.message || 'Registration failed. Please try again.');
+      
+      console.log(err)
+      setError( 'Invalid credentials. Please try again.');
     }
   };
 
@@ -99,10 +99,10 @@ const Register = () => {
         </button>
       </form>
       <div className="text-center"><h2>Already have an account?</h2></div>
-      <div className="text-center ">
+      <div className="text-center">
         <button
           type="button"
-          className="text-red-500  rounded-md hover:underline"
+          className="text-red-500 rounded-md hover:underline"
           onClick={handleLoginClick}
         >
           Login

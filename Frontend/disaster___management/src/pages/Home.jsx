@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import homepageService from '../services/homepageService';
 import { Bar } from 'react-chartjs-2';
+import { useNavigate } from 'react-router-dom';
 
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend } from 'chart.js';
 
@@ -13,6 +14,7 @@ const Home = () => {
   const [chartData, setChartData] = useState([]);
   const [recentCrises, setRecentCrises] = useState([]);
   const [volunteers, setVolunteers] = useState([]);
+  const navigate = useNavigate();
   
 
   useEffect(() => {
@@ -71,9 +73,19 @@ const Home = () => {
       },
     },
   };
+  const handleClick = () => {
+    navigate('/inventory'); // Replace '/target-page' with the path you want to navigate to
+  };
 
   return (
     <div className="container mx-auto px-4 py-8 mb-8">
+      <div className={`flex justify-center space-x-4 mt-8 ${role === "admin" ? "" : "hidden"}`}>
+      <button
+      onClick={handleClick}
+      className="bg-blue-500 text-white justify-center py-2 px-4 rounded-md hover:bg-blue-600 focus:outline-none">
+     Inventory Page
+    </button>
+    </div>
       <div className={`flex justify-center space-x-4 mt-8 ${role === "admin" ? "" : "hidden"}`}>
       <button
         onClick={() => reportService.downloadReport('donation')}
@@ -125,7 +137,7 @@ const Home = () => {
                   </p>
                 </div>
                 <p className="mt-2 text-sm text-gray-700">Status: {crisis.status}</p>
-                <p className="mt-2 font-bold text-red-600">{crisis.required_help}</p>
+                <p className="mt-2 font-bold text-red-600">Required help: {crisis.required_help}</p>
               </li>
             ))}
           </ul>
