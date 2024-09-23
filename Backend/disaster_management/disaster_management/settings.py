@@ -26,7 +26,7 @@ SECRET_KEY = 'django-insecure-r86c3r32-d6*5u1n2l&axasg7xmf1$_a0tp(5bel#is1h^y&=3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ['disaster-management-6kgh.onrender.com']
+ALLOWED_HOSTS = ['disaster-management-6kgh.onrender.com','127.0.0.1','localhost',]
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:5173",  # Your frontend address
@@ -117,7 +117,7 @@ DATABASES = {
         'NAME':'disaster_management' ,
         'USER':'disaster_management_user',
         'PASSWORD': 'Fpq1QbWHsRrd7VbnG4wclmR5eEEii8FM',
-        'HOST': 'dpg-cro85f9u0jms73c7icq0-a',
+        'HOST': 'dpg-cro85f9u0jms73c7icq0-a.singapore-postgres.render.com',
         'PORT': '5432',
     }
 }
@@ -156,7 +156,19 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.1/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = '/static/'
+STATIC_ROOT = BASE_DIR / "staticfiles"
+MEDIA_URL = '/media/'
+MEDIA_ROOT = BASE_DIR / 'uploads'
+
+STORAGES = {
+    "default": {
+        "BACKEND": "django.core.files.storage.FileSystemStorage",
+    },
+    "staticfiles": {
+        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+    },
+}
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.1/ref/settings/#default-auto-field

@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Task, Donation, Crisis, InventoryItem, Report
+from .models import User, Task, Donation, Crisis, InventoryItem, Report,Respond
 
 # Register the custom user model
 @admin.register(User)
@@ -48,3 +48,10 @@ class ReportAdmin(admin.ModelAdmin):
     list_display = ('report_type', 'generated_on', 'file')
     list_filter = ('report_type',)
     search_fields = ('report_type',)
+
+@admin.register(Respond)
+class RespondAdmin(admin.ModelAdmin):
+    list_display = ('crisis', 'volunteer', 'message')
+    
+
+

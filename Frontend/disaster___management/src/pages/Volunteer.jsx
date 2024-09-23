@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import volunteerService from '../services/volunteerService';
 
 const Volunteer = () => {
+  const role = JSON.parse(localStorage.getItem("role"));
   const [volunteers, setVolunteers] = useState([]);
   const [locationFilter, setLocationFilter] = useState('');
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -150,17 +151,19 @@ const Volunteer = () => {
               )}
               {/* Assign Task Button */}
               <button
-                onClick={() => openAssignModal(volunteer)}
-                className={`mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700 ${token === null ? "hidden" : ""}`}   
-              >
-                Assign Task
-              </button>
-              <button
-                          onClick={() => openDeleteModal(volunteer)}
-                          className={`mt-4 bg-red-500 text-white py-2 px-4  rounded-md hover:text-red-700 ${token === null ? "hidden" : ""}`}   
-                        >
-                          Delete Task
-                        </button>
+  onClick={() => openAssignModal(volunteer)}
+  className={`mt-4 bg-blue-500 text-white py-2 px-4 rounded-md hover:bg-blue-700 ${(token === null || role === "volunteer") ? "hidden" : ""}`}
+>
+  Assign Task
+</button>
+
+<button
+  onClick={() => openDeleteModal(volunteer)}
+  className={`mt-4 bg-red-500 text-white py-2 px-4 rounded-md hover:text-red-700 ${(token === null || role === "volunteer") ? "hidden" : ""}`}
+>
+  Delete Task
+</button>
+
             </li>
           ))
         )}

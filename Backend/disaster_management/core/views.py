@@ -5,12 +5,17 @@ from .models import Donation, Crisis, InventoryItem
 from .serializers import DonationSerializer, CrisisSerializer, InventorySerializer
 from .permissions import IsAdmin, IsVolunteer
 from rest_framework.permissions import AllowAny, IsAuthenticated
-
+import csv
+from django.http import HttpResponse
+from .models import Donation, InventoryItem
+import csv
+import datetime
 from .serializers import UserSerializer
 from .models import Task,Respond
 from .serializers import TaskSerializer
 
-
+from django.utils.timezone import now
+from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from django.db.models import Sum, DateField
@@ -80,13 +85,17 @@ class DonationAPI(APIView):
         # Sort combined data by day
         combined_chart_data = sorted(combined_data.values(), key=itemgetter('day'))
 
+        # Filter for the last 15 days
+        fifteen_days_ago = now() - timedelta(days=15)
+        combined_chart_data = [data for data in combined_chart_data if data['day'] >= fifteen_days_ago.date()]
+
         available_donations = total_donations - total_expense
         serializer = DonationSerializer(donations, many=True)
         
         response_data = {
             "total_donated": total_donations,
             "available_donations": available_donations,
-            "chart_data": combined_chart_data,  # Combined donations and expenses by day
+            "chart_data": combined_chart_data,  # Only the last 15 days' data
             "donations": serializer.data
         }
 
@@ -158,7 +167,7 @@ class CrisisAPI(APIView):
             
             paginated_crises = paginator.paginate_queryset(crises, request)
             serializer = CrisisSerializer(paginated_crises, many=True)
-            print(serializer.data)
+   
            
             
             return paginator.get_paginated_response(serializer.data)
@@ -192,7 +201,7 @@ class CrisisAPI(APIView):
     def put(self, request):
         # Extract crisis_id from the request body
         crisis_id = request.GET.get('id')
-        print("request",request.data)
+      
         if not crisis_id:
             return Response({'detail': 'Crisis ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -202,7 +211,7 @@ class CrisisAPI(APIView):
             return Response({'detail': 'Crisis not found.'}, status=status.HTTP_404_NOT_FOUND)
 
         if request.user.role == 'admin':
-            print("moon")
+        
             serializer = CrisisSerializer(crisis, data=request.data, partial=True)
             if serializer.is_valid():
                 serializer.save()
@@ -214,7 +223,7 @@ class CrisisAPI(APIView):
    
     def delete(self, request):
         crisis_id = request.GET.get('id')
-        print("request",request.data)
+       
         if not crisis_id:
             return Response({'detail': 'Crisis ID is required.'}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -341,31 +350,7 @@ class ProfileAPI(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 # Assign volunteers to tasks/crises
-class AssignTaskAPI(APIView):
-    permission_classes = [IsAdmin]
 
-    def post(self, request, volunteer_id, task_id):
-        try:
-           
-            user = User.objects.get(pk=volunteer_id)
-            
-            # Ensure the user is a volunteer
-            if user.role != 'volunteer':
-                return Response({"error": "User is not a volunteer."}, status=status.HTTP_400_BAD_REQUEST)
-
-            # Get or create the volunteer object
-            volunteer, created = Volunteer.objects.get_or_create(user=user)  
-            
-            task = Task.objects.get(pk=task_id)
-            
-           
-            volunteer.assigned_tasks.add(task)
-            
-            return Response({"status": "Task assigned to volunteer."}, status=status.HTTP_200_OK)
-        
-        except Volunteer.DoesNotExist:
-            return Response({"error": "Volunteer not found."}, status=status.HTTP_404_NOT_FOUND)
-        
      
 
 
@@ -392,34 +377,73 @@ class VolunteerTaskAPI(APIView):
             return Response({"error": "Task not found"}, status=status.HTTP_404_NOT_FOUND)
 
 
-import csv
-from django.http import HttpResponse
-from .models import Donation, InventoryItem
 
 # Admin API to generate and download reports
 class ReportAPI(APIView):
     permission_classes = [IsAdmin]
 
     def get(self, request, report_type):
-        response = HttpResponse(content_type='text/csv')
-        writer = csv.writer(response)
         
+        today = datetime.date.today()
+        start_of_day = datetime.datetime.combine(today, datetime.time.min)
+        end_of_day = datetime.datetime.combine(today, datetime.time.max)
+
+       
+        report_format = request.GET.get('format', 'csv')
+
         if report_type == 'donation':
-            donations = Donation.objects.all()
+            return self.generate_donation_report(start_of_day, end_of_day, report_format)
+        elif report_type == 'expense':
+            return self.generate_expense_report(start_of_day, end_of_day, report_format)
+        elif report_type == 'inventory':
+            return self.generate_inventory_report(report_format)
+
+        return HttpResponse(status=404)
+
+    def generate_donation_report(self, start_of_day, end_of_day, report_format):
+        donations = Donation.objects.filter(timestamp__range=(start_of_day, end_of_day))
+
+        if report_format == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            writer = csv.writer(response)
             writer.writerow(['Amount', 'Donor', 'Date'])
             for donation in donations:
                 writer.writerow([donation.amount, donation.donor_name, donation.timestamp])
-        
-        elif report_type == 'inventory':
-            inventory = InventoryItem.objects.all()
-            writer.writerow(['Item', 'Type', 'Quantity', 'Added By', 'Date'])
-            for item in inventory:
-                writer.writerow([item.name, item.type, item.quantity, item.added_by.username, item.timestamp])
+            response['Content-Disposition'] = 'attachment; filename="daily_donation_report.csv"'
+        else:  
+            response = self.generate_excel_report(donations, ['Amount', 'Donor', 'Date'], 'daily_donation_report.xlsx')
 
-        response['Content-Disposition'] = f'attachment; filename="{report_type}_report.csv"'
         return response
 
+    def generate_expense_report(self, start_of_day, end_of_day, report_format):
+        expenses = InventoryItem.objects.filter(timestamp__range=(start_of_day, end_of_day))  # Assuming Expense model exists
 
+        if report_format == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            writer = csv.writer(response)
+            writer.writerow(['Amount', 'Category','Quantity','Date', 'Added By'])
+            for expense in expenses:
+                writer.writerow([expense.expense, expense.item_name,expense.quantity, expense.timestamp, expense.added_by.username])
+            response['Content-Disposition'] = 'attachment; filename="daily_expense_report.csv"'
+        else:  # Excel
+            response = self.generate_excel_report(expenses, ['Amount', 'Category', 'Date', 'Added By'], 'daily_expense_report.xlsx')
+
+        return response
+
+    def generate_inventory_report(self, report_format):
+        inventory = InventoryItem.objects.all()
+
+        if report_format == 'csv':
+            response = HttpResponse(content_type='text/csv')
+            writer = csv.writer(response)
+            writer.writerow(['Item', 'Type', 'Quantity', 'Added By', 'Date'])
+            for item in inventory:
+                writer.writerow([item.item_name, item.item_type, item.quantity, item.added_by.username, item.timestamp])
+            response['Content-Disposition'] = 'attachment; filename="inventory_report.csv"'
+        else:  # Excel
+            response = self.generate_excel_report(inventory, ['Item', 'Type', 'Quantity', 'Added By', 'Date'], 'inventory_report.xlsx')
+
+        return response
 
 
 
@@ -454,7 +478,7 @@ class ReportAPI(APIView):
 class RegisterAPIView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
-        print(request.data)
+       
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
@@ -472,9 +496,10 @@ class LoginAPIView(APIView):
         if serializer.is_valid():
             user = serializer.validated_data['user']
             refresh = RefreshToken.for_user(user)
-            print(str(refresh.access_token))
+         
             return Response({
                 'username': user.username,
+                'role': user.role,
                 'refresh': str(refresh),
                 'access': str(refresh.access_token),
             })
@@ -529,7 +554,7 @@ class VolunteerAssignTask(APIView):
        
         volunteer = User.objects.get(pk=volunteer_id)
         
-        print(request.data['task_id'])
+       
         
         tasks = volunteer.assigned_tasks.add(request.data['task_id'])
 

@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import User, Donation, Crisis, InventoryItem, Task
+from .models import User, Donation, Crisis, InventoryItem, Task,Respond
 
 from django.contrib.auth import authenticate
 from .models import User
@@ -46,11 +46,19 @@ class DonationSerializer(serializers.ModelSerializer):
         model = Donation
         fields = ['amount', 'donor_name', 'timestamp']
 
+class RespondSerializer(serializers.ModelSerializer):
+    volunteer_name = serializers.CharField(source='volunteer.username', read_only=True)
+    class Meta:
+        model = Respond
+        fields = ['id', 'volunteer_name', 'message', 'responded_at'] 
+
+
 # Crisis Serializer
 class CrisisSerializer(serializers.ModelSerializer):
+    responses = RespondSerializer(many=True, read_only=True)
     class Meta:
         model = Crisis
-        fields = ['id', 'title', 'location', 'description', 'severity', 'status', 'image', 'required_help', 'created_by', 'timestamp']
+        fields = ['id', 'title', 'location', 'description', 'severity', 'status', 'image', 'required_help', 'created_by', 'timestamp','responses']
 
 # Inventory Serializer
 class InventorySerializer(serializers.ModelSerializer):

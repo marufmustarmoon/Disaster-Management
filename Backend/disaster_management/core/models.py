@@ -18,8 +18,8 @@ class User(AbstractUser):
     )
     role = models.CharField(max_length=10, choices=ROLE_CHOICES)
     location = models.CharField(max_length=20, choices=LOCATION_CHOUCES, default='dhaka')
-    age = models.IntegerField()
-    mobile_number = models.CharField(max_length=20)
+    age = models.IntegerField(null=True, blank=True)
+    mobile_number = models.CharField(max_length=20, null=True, blank=True)
     assigned_tasks = models.ManyToManyField('Task', related_name='assign_task', blank=True)
 
     def __str__(self):
@@ -102,9 +102,10 @@ class Report(models.Model):
 
 class Respond(models.Model):
     volunteer = models.ForeignKey(User, on_delete=models.CASCADE, limit_choices_to={'role': 'volunteer'})
-    crisis = models.ForeignKey(Crisis, on_delete=models.CASCADE)
+    crisis = models.ForeignKey(Crisis, on_delete=models.CASCADE, related_name="responses")  # Add related_name
     message = models.TextField()
     responded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"{self.volunteer.username} - {self.crisis.title}"
+

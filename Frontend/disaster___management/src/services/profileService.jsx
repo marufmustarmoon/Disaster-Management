@@ -22,6 +22,22 @@ const getProfile = async () => {
   return response.data;
 };
 
+const updateProfile = async (profileData) => {
+  console.log("profileData",profileData)
+  const token = JSON.parse(localStorage.getItem('user'))
+  console.log("token",token)
+  if (!token) throw new Error('No token found');
+  const response = await axios.patch(`${API_URL}/account/`, profileData, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    }
+ 
+  });
+
+  return response.data;
+
+};
+
 
 // Get the current logged-in user from localStorage
 
@@ -29,6 +45,7 @@ const getProfile = async () => {
 const profileService = {
  
   getProfile,
+  updateProfile
 
 };
 

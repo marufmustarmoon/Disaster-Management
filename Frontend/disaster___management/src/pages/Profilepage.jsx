@@ -20,7 +20,7 @@ const ProfilePage = () => {
         const userProfile = await profileService.getProfile();
         console.log("userdata",userProfile)
         setProfile(userProfile);
-        console.log("userdata",userProfile)
+        
 
 
       } catch (err) {
@@ -46,7 +46,7 @@ const ProfilePage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      
+      console.log("profile",profile)
       await profileService.updateProfile(profile);
       alert('Profile updated successfully');
     } catch (err) {

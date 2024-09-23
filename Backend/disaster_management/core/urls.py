@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import  RegisterAPIView, LoginAPIView, DonationAPI, CrisisAPI, InventoryAPI, VolunteerManagementAPI, AssignTaskAPI, ReportAPI,VolunteerTaskAPI,AdminTaskAPI,ProfileAPI,VolunteerAssignTask,CrisistoResponseAPI
+from .views import  RegisterAPIView, LoginAPIView, DonationAPI, CrisisAPI, InventoryAPI, VolunteerManagementAPI, ReportAPI,VolunteerTaskAPI,AdminTaskAPI,ProfileAPI,VolunteerAssignTask,CrisistoResponseAPI
 
 urlpatterns = [
     #register urls
@@ -10,13 +10,12 @@ urlpatterns = [
     path('crisis/', CrisisAPI.as_view(), name='crisis-api'),
     path('inventory/', InventoryAPI.as_view(), name='inventory-api'),
     # path('volunteers/', AnonymousVolunteerAPI.as_view(), name='anonymous-volunteer-api'),
-    path('crises/<int:crisis_id>/respond/', CrisistoResponseAPI.as_view(), name='crisis-respond'),
+    path('crisis/<int:crisis_id>/respond/', CrisistoResponseAPI.as_view(), name='crisis-respond'),
 
     # Admin-specific routes
     path('volunteers/<int:volunteer_id>/assign_task/', VolunteerAssignTask.as_view(), name='volunteer-management-api'),
     path('volunteers/', VolunteerManagementAPI.as_view(), name='volunteer-management'),
-    path('assign-task/<int:volunteer_id>/<int:task_id>/', AssignTaskAPI.as_view(), name='assign-task-api'),
-    path('admin/report/<str:report_type>/', ReportAPI.as_view(), name='report-api'),
+    path('reports/<str:report_type>/', ReportAPI.as_view(), name='generate_report'),
     
     # Profile
     path('account/', ProfileAPI.as_view(), name='profile-api'),

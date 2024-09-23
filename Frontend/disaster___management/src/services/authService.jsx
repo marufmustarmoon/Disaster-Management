@@ -23,6 +23,7 @@ const login = async (userData) => {
 
     localStorage.setItem('user', JSON.stringify(response.data.access));
     localStorage.setItem('username', JSON.stringify(response.data.username));
+    localStorage.setItem('role', JSON.stringify(response.data.role));
    
 
   }
@@ -34,6 +35,7 @@ const login = async (userData) => {
 const logout = () => {
   localStorage.removeItem('user');
   localStorage.removeItem('username');
+  localStorage.removeItem('role');
 };
 
 

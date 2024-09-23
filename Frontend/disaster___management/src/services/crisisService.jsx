@@ -79,12 +79,22 @@ const deleteCrisis = async (id) => {
       return { error: 'Error updating crisis' };
     }
 };
+const respondToCrisis = (id, message) => {
+  const token = JSON.parse(localStorage.getItem("user"));
+  const headers = {
+      
+    Authorization: token ? `Bearer ${token}` : undefined,
+  };
+  return axios.post(`${API_URL}${id}/respond/`, { message },{headers});
+}; 
 
 const crisisService = {
   getCrises,
   createCrisis,
   updateCrisis,
   deleteCrisis,
+  respondToCrisis
+  
 };
 
 export default crisisService;
