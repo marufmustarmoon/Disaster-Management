@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/donations'; // Adjust the API endpoint as needed
+const API_URL = 'https://disaster-management-6kgh.onrender.com/api/donations'; // Adjust the API endpoint as needed
 
 const getDonations = async () => {
   const response = await axios.get(API_URL);

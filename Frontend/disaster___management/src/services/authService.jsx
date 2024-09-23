@@ -2,7 +2,7 @@
 
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api'; // Adjust the URL to match your backend
+const API_URL = 'https://disaster-management-6kgh.onrender.com/api'; // Adjust the URL to match your backend
 
 // Register a new user (Volunteer)
 const register = async (userData) => {

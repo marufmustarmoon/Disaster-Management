@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/inventory'; // Replace with your actual API URL
+const API_URL = 'https://disaster-management-6kgh.onrender.com/api/inventory'; // Replace with your actual API URL
 
 const inventoryService = {
   // Get all inventory items

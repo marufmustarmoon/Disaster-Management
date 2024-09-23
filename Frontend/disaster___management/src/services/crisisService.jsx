@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = 'http://localhost:8000/api/crisis/'; // Adjust the API endpoint as needed
+const API_URL = 'https://disaster-management-6kgh.onrender.com/'; // Adjust the API endpoint as needed
 
 const getCrises = async (page = 1,itemsPerPage=5) => {
   const token = JSON.parse(localStorage.getItem("user"));

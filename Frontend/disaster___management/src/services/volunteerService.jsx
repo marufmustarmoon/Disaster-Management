@@ -2,8 +2,8 @@
 
 import axios from "axios";
 
-const API_URL = "http://localhost:8000/api/volunteers"; // Adjust the API endpoint as needed
-const TASK_API_URL = "http://localhost:8000/api/tasks"; // Adjust the API endpoint as needed
+const API_URL = "https://disaster-management-6kgh.onrender.com/api/volunteers"; // Adjust the API endpoint as needed
+const TASK_API_URL = "https://disaster-management-6kgh.onrender.com/api/tasks"; // Adjust the API endpoint as needed
 
 
 const getVolunteers = async (page = 1,itemsPerPage=5) => {

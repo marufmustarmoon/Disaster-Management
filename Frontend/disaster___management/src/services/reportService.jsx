@@ -1,4 +1,4 @@
-const API_URL = 'http://localhost:8000/api/reports'; 
+const API_URL = 'https://disaster-management-6kgh.onrender.com/api/reports'; 
 
 const downloadReport = async (reportType) => {
   const token = JSON.parse(localStorage.getItem('user'))
